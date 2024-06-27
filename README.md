@@ -44,6 +44,13 @@ The current code in Stoix was initially **largely** taken and subsequently adapt
 
 ## Overview 🦜
 
+### Stoix TLDR
+1. **Algorithms:** Stoix offers easily hackable, single-file implementations of popular algorithms in pure JAX. You can vectorize algorithm training on a single device using `vmap` as well as distribute training across multiple devices with `pmap` (or both). Multi-host support (i.e., vmap/pmap over multiple devices **and** machines) is coming soon! All implementations include checkpointing to save and resume parameters and training runs.
+
+2. **Hydra Config System:** Leverage the Hydra configuration system for efficient and consistent management of experiments, network architectures, and environments. Hydra facilitates the easy addition of new hyperparameters and supports multi-runs and Optuna hyperparameter optimization. No more need to create large bash scripts to run a series of experiments with differing hyperparameters, network architectures or environments.
+
+3. **Advanced Logging:** Stoix features advanced and configurable logging, ready for output to the terminal, TensorBoard, and other ML tracking dashboards (WandB and Neptune). It also supports logging experiments in JSON format ready for statistical tests and generating RLiable plots (see the plotting notebook). This enables statistically confident comparisons of algorithms natively.
+
 Stoix currently offers the following building blocks for Single-Agent RL research:
 
 ### Implementations of Algorithms 🥑
@@ -55,6 +62,7 @@ Stoix currently offers the following building blocks for Single-Agent RL researc
 - **Munchausen DQN (M-DQN)** [Paper](https://arxiv.org/abs/2007.14430)
 - **Quantile Regression DQN (QR-DQN)** - [Paper](https://arxiv.org/abs/1710.10044)
 - **DQN with Regularized Q-learning (DQN-Reg)** [Paper](https://arxiv.org/abs/2101.03958)
+- **Rainbow** - [Paper](https://arxiv.org/abs/1710.02298)
 - **REINFORCE With Baseline** - [Paper](https://people.cs.umass.edu/~barto/courses/cs687/williams92simple.pdf)
 - **Deep Deterministic Policy Gradient (DDPG)** - [Paper](https://arxiv.org/abs/1509.02971)
 - **Twin Delayed DDPG (TD3)** - [Paper](https://arxiv.org/abs/1802.09477)
@@ -70,7 +78,7 @@ Stoix currently offers the following building blocks for Single-Agent RL researc
 - **Sampled Alpha/Mu-Zero** - [Paper](https://arxiv.org/abs/2104.06303)
 
 ### Environment Wrappers 🍬
-Stoix offers wrappers for [Gymnax][gymnax], [Jumanji][jumanji], [Brax][brax], [XMinigrid][xminigrid], [Craftax][craftax] and even [JAXMarl][jaxmarl] (although using Centralised Controllers).
+Stoix offers wrappers for [Gymnax][gymnax], [Jumanji][jumanji], [Brax][brax], [XMinigrid][xminigrid], [Craftax][craftax], [POPJym][popjym] and even [JAXMarl][jaxmarl] (although using Centralised Controllers).
 
 ### Statistically Robust Evaluation 🧪
 Stoix natively supports logging to json files which adhere to the standard suggested by [Gorsane et al. (2022)][toward_standard_eval]. This enables easy downstream experiment plotting and aggregation using the tools found in the [MARL-eval][marl_eval] library.
@@ -120,6 +128,18 @@ Stoix makes use of Hydra for config management. In order to see our default syst
 python stoix/systems/ppo/ff_ppo.py env=gymnax/cartpole
 ```
 
+Additionally, certain implementations such as Dueling DQN are decided by the network architecture but the underlying algorithm stays the same. For example, if you wanted to run Dueling DQN you would simply do:
+
+```bash
+python stoix/systems/q_learning/ff_dqn.py network=mlp_dueling_dqn
+```
+
+or if you wanted to do dueling C51, you could do:
+
+```bash
+python stoix/systems/q_learning/ff_c51.py network=mlp_dueling_c51
+```
+
 ## Contributing 🤝
 
 Please read our [contributing docs](docs/CONTRIBUTING.md) for details on how to submit pull requests, our Contributor License Agreement and community guidelines.
@@ -138,7 +158,6 @@ We plan to iteratively expand Stoix in the following increments:
     - [ ] Muesli - [Paper](https://arxiv.org/abs/2104.06159)
     - [ ] DreamerV3 - [Paper](https://arxiv.org/abs/2301.04104)
     - [ ] R2D2 - [Paper](https://openreview.net/pdf?id=r1lyTjAqYX)
-    - [ ] Rainbow - [Paper](https://arxiv.org/abs/1710.02298)
 - 🎮 Self-play 2-player Systems for board games.
 
 Please do follow along as we develop this next phase!
@@ -190,5 +209,6 @@ We would like to thank the authors and developers of [Mava](mava) as this was es
 [brax]: https://github.com/google/brax
 [xminigrid]: https://github.com/corl-team/xland-minigrid/
 [craftax]: https://github.com/MichaelTMatthews/Craftax
+[popjym]: https://github.com/FLAIROx/popjym
 
 Disclaimer: This is not an official InstaDeep product nor is any of the work putforward associated with InstaDeep in any official capacity.

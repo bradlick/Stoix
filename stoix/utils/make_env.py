@@ -7,6 +7,7 @@ import jax.numpy as jnp
 import jaxmarl
 import jumanji
 import pgx
+import popjym
 import xminigrid
 from brax.envs import _envs as brax_environments
 from brax.envs import create as brax_make
@@ -18,14 +19,15 @@ from jumanji.registration import _REGISTRY as JUMANJI_REGISTRY
 from jumanji.specs import BoundedArray, MultiDiscreteArray
 from jumanji.wrappers import AutoResetWrapper, MultiToSingleWrapper
 from omegaconf import DictConfig
+from popjym.registration import REGISTERED_ENVS as POPJYM_REGISTRY
 from xminigrid.registration import _REGISTRY as XMINIGRID_REGISTRY
 
 from stoix.utils.debug_env import IdentityGame, SequenceGame
 from stoix.wrappers import GymnaxWrapper, JumanjiWrapper, RecordEpisodeMetrics
 from stoix.wrappers.brax import BraxJumanjiWrapper
 from stoix.wrappers.jaxmarl import JaxMarlWrapper, MabraxWrapper, SmaxWrapper
-from stoix.wrappers.jumanji import MultiBoundedToBounded, MultiDiscreteToDiscrete
 from stoix.wrappers.pgx import PGXWrapper
+from stoix.wrappers.transforms import MultiBoundedToBounded, MultiDiscreteToDiscrete
 from stoix.wrappers.xminigrid import XMiniGridWrapper
 
 
@@ -54,11 +56,10 @@ def make_jumanji_env(
     env = jumanji.make(env_name, **env_kwargs)
     eval_env = jumanji.make(env_name, **env_kwargs)
     env, eval_env = JumanjiWrapper(
-        env, config.env.observation_attribute, config.env.flatten_observation
+        env, config.env.observation_attribute, config.env.multi_agent
     ), JumanjiWrapper(
         eval_env,
         config.env.observation_attribute,
-        config.env.flatten_observation,
         config.env.multi_agent,
     )
 
@@ -111,8 +112,8 @@ def make_xland_minigrid_env(env_name: str, config: DictConfig) -> Tuple[Environm
 
     eval_env, eval_env_params = xminigrid.make(env_name, **config.env.kwargs)
 
-    env = XMiniGridWrapper(env, env_params, config.env.flatten_observation)
-    eval_env = XMiniGridWrapper(eval_env, eval_env_params, config.env.flatten_observation)
+    env = XMiniGridWrapper(env, env_params)
+    eval_env = XMiniGridWrapper(eval_env, eval_env_params)
 
     env = AutoResetWrapper(env, next_obs_in_extras=True)
     env = RecordEpisodeMetrics(env)
@@ -170,13 +171,11 @@ def make_jaxmarl_env(
     # Create jaxmarl envs.
     env = _jaxmarl_wrappers.get(config.env.env_name, JaxMarlWrapper)(
         jaxmarl.make(env_name, **kwargs),
-        config.env.flatten_observation,
         config.env.add_global_state,
         config.env.add_agent_ids_to_state,
     )
     eval_env = _jaxmarl_wrappers.get(config.env.env_name, JaxMarlWrapper)(
         jaxmarl.make(env_name, **kwargs),
-        config.env.flatten_observation,
         config.env.add_global_state,
         config.env.add_agent_ids_to_state,
     )
@@ -312,6 +311,31 @@ def make_pgx_env(env_name: str, config: DictConfig) -> Tuple[Environment, Enviro
     return env, eval_env
 
 
+def make_popjym_env(env_name: str, config: DictConfig) -> Tuple[Environment, Environment]:
+    """
+    Create POPJym environments for training and evaluation.
+
+    Args:
+        env_name (str): The name of the environment to create.
+        config (Dict): The configuration of the environment.
+
+    Returns:
+        A tuple of the environments.
+    """
+
+    # Create envs.
+    env, env_params = popjym.make(env_name, **config.env.kwargs)
+    eval_env, eval_env_params = popjym.make(env_name, **config.env.kwargs)
+
+    env = GymnaxWrapper(env, env_params)
+    eval_env = GymnaxWrapper(eval_env, eval_env_params)
+
+    env = AutoResetWrapper(env, next_obs_in_extras=True)
+    env = RecordEpisodeMetrics(env)
+
+    return env, eval_env
+
+
 def make(config: DictConfig) -> Tuple[Environment, Environment]:
     """
     Create environments for training and evaluation..
@@ -340,6 +364,8 @@ def make(config: DictConfig) -> Tuple[Environment, Environment]:
         envs = make_debug_env(env_name, config)
     elif env_name in pgx.available_envs():
         envs = make_pgx_env(env_name, config)
+    elif env_name in POPJYM_REGISTRY:
+        envs = make_popjym_env(env_name, config)
     else:
         raise ValueError(f"{env_name} is not a supported environment.")
 
